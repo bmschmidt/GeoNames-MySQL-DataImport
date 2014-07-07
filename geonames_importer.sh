@@ -4,6 +4,8 @@
 dbhost="localhost"
 dbport=3306
 dbname="geonames"
+defaults="~/.my.cnf"
+
 dir=$( cd "$( dirname "$0" )" && pwd )
 
 logo() {
@@ -72,12 +74,11 @@ fi
 
 # Deals with operation mode 2 (Database issues...)
 # Parses command line parameters.
-while getopts "a:u:p:h:r:n:" opt; 
+while getopts "a:d:h:r:n:" opt; 
 do
     case $opt in
         a) action=$OPTARG ;;
-        u) dbusername=$OPTARG ;;
-        p) dbpassword=$OPTARG ;;
+        d) defaults=$OPTARG ;;
         h) dbhost=$OPTARG ;;
         r) dbport=$OPTARG ;;
         n) dbname=$OPTARG ;;
@@ -92,20 +93,9 @@ case $action in
     ;;
 esac
 
-if [ -z $dbusername ]; then
-    echo "No user name provided for accessing the database. Please write some value in parameter -u..."
-    exit 1
-fi
-
-if [ -z $dbpassword ]; then
-    echo "No user password provided for accessing the database. Please write some value in parameter -p..."
-    exit 1
-fi
-
 echo "Database parameters being used..."
 echo "Orden: " $action
-echo "UserName: " $dbusername
-echo "Password: " $dbpassword
+echo "Defaults file: " $defaults
 echo "DB Host: " $dbhost
 echo "DB Port: " $dbport
 echo "DB Name: " $dbname
@@ -113,25 +103,25 @@ echo "DB Name: " $dbname
 case "$action" in
     create-db)
         echo "Creating database $dbname..."
-        mysql -h $dbhost -P $dbport -u $dbusername -p$dbpassword -Bse "DROP DATABASE IF EXISTS $dbname;"
-        mysql -h $dbhost -P $dbport -u $dbusername -p$dbpassword -Bse "CREATE DATABASE $dbname DEFAULT CHARACTER SET utf8;" 
-        mysql -h $dbhost -P $dbport -u $dbusername -p$dbpassword -Bse "USE $dbname;" 
-        mysql -h $dbhost -P $dbport -u $dbusername -p$dbpassword $dbname < $dir/geonames_db_struct.sql
+        mysql --defaults-file=$defaults -h $dbhost -P $dbport -Bse "DROP DATABASE IF EXISTS $dbname;"
+        mysql  --defaults-file=$defaults -h $dbhost -P $dbport -Bse "CREATE DATABASE $dbname DEFAULT CHARACTER SET utf8;" 
+        mysql  --defaults-file=$defaults -h $dbhost -P $dbport -Bse "USE $dbname;" 
+        mysql  --defaults-file=$defaults -h $dbhost -P $dbport $dbname < $dir/geonames_db_struct.sql
     ;;
         
     import-dumps)
         echo "Importing geonames dumps into database $dbname"
-        mysql -h $dbhost -P $dbport -u $dbusername -p$dbpassword --local-infile=1 $dbname < $dir/geonames_import_data.sql
+        mysql  --defaults-file=$defaults -h $dbhost -P $dbport --local-infile=1 $dbname < $dir/geonames_import_data.sql
     ;;    
     
     drop-db)
         echo "Dropping $dbname database"
-        mysql -h $dbhost -P $dbport -u $dbusername -p$dbpassword -Bse "DROP DATABASE IF EXISTS $dbname;"
+        mysql  --defaults-file=$defaults -h $dbhost -P $dbport  -Bse "DROP DATABASE IF EXISTS $dbname;"
     ;;
         
     truncate-db)
         echo "Truncating \"geonames\" database"
-        mysql -h $dbhost -P $dbport -u $dbusername -p$dbpassword $dbname < $dir/geonames_truncate_db.sql
+        mysql --defaults-file=$defaults -h $dbhost -P $dbport $dbname < $dir/geonames_truncate_db.sql
     ;;
 esac
 
